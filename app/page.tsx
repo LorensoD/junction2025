@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { characters } from "./config/characters";
 
 export default function Home() {
@@ -12,12 +13,15 @@ export default function Home() {
 
         {/* Hackathon Map */}
         <div className="relative w-full aspect-video bg-gradient-to-b from-gray-200 to-gray-300 rounded-2xl shadow-2xl overflow-hidden border-4 border-gray-400">
-          {/* Placeholder for map background - will be replaced with actual map later */}
-          <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
-            [Hackathon venue map will go here]
-          </div>
+            <Image
+                src="/map.jpg.webp"
+                alt="Hackathon venue map"
+                fill
+                className="object-cover"
+                priority
+            />
 
-          {/* Character Pins */}
+            {/* Character Pins */}
           {characters.map((character) => (
             <Link
               key={character.id}
