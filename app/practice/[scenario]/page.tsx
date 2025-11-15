@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from 'next/navigation'
-import { ConversationBar } from "@/components/ui/conversation-bar"
+import { useConversation } from "@elevenlabs/react";
 
 type Emotion = "neutral" | "talking" | "happy" | "mad" | "sad";
 
@@ -12,9 +12,10 @@ export default function PracticePage() {
   const [loading, setLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState<string>("");
-  const [isConnected, setIsConnected] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<any>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const params = useParams<{ scenario: string }>();
 
   const agentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID;
@@ -24,6 +25,25 @@ export default function PracticePage() {
     "salary": "Salary discussion",
     "pickup": "Pick up a girl at club",
   };
+
+  // Initialize ElevenLabs Conversation
+  const conversation = useConversation({
+    onConnect: () => {
+      console.log("✅ Connected to ElevenLabs");
+    },
+    onDisconnect: () => {
+      console.log("❌ Disconnected from ElevenLabs");
+      setEmotion("neutral");
+      setIsStreaming(false);
+    },
+    onMessage: (message) => {
+      console.log("📨 Message:", message);
+    },
+    onError: (error) => {
+      console.error("❌ Error:", error);
+      setError(error.message);
+    },
+  });
 
   useEffect(() => {
     const loadImportMap = () => {
@@ -53,12 +73,16 @@ export default function PracticePage() {
         const module = await import(/* webpackIgnore: true */ "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.5/modules/talkinghead.mjs");
         const TalkingHead = module.TalkingHead;
 
+        // Initialize without TTS - we'll use streaming from ElevenLabs
         headRef.current = new TalkingHead(avatarRef.current, {
           ttsEndpoint: "https://eu-texttospeech.googleapis.com/v1beta1/text:synthesize",
           ttsApikey: process.env.NEXT_PUBLIC_GOOGLE_TTS_API_KEY || "",
           lipsyncModules: ["en"],
           cameraView: "upper"
         });
+
+        // Initialize AudioContext for audio processing
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
 
         await headRef.current.showAvatar({
           url: 'https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb?morphTargets=ARKit,Oculus+Visemes,mouthOpen,mouthSmile,eyesClosed,eyesLookUp,eyesLookDown&textureSizeLimit=1024&textureFormat=png',
@@ -88,8 +112,36 @@ export default function PracticePage() {
       if (headRef.current) {
         headRef.current.stop();
       }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
     };
   }, []);
+
+  // Monitor conversation state
+  useEffect(() => {
+    console.log("📊 Conversation state:", {
+      status: conversation.status,
+      isSpeaking: conversation.isSpeaking,
+      isStreaming: isStreaming
+    });
+  }, [conversation.status, conversation.isSpeaking, isStreaming]);
+
+  // Don't auto-start streaming - ElevenLabs handles audio playback
+  // We'll just update the emotion state based on speaking
+  useEffect(() => {
+    if (conversation.isSpeaking) {
+      console.log("🗣️ Agent is speaking");
+      setEmotion("talking");
+    } else {
+      console.log("🤐 Agent stopped speaking");
+      setEmotion("neutral");
+    }
+  }, [conversation.isSpeaking]);
+
+  // For now, we'll let ElevenLabs handle audio playback
+  // And just sync the avatar lip movements manually
+  // TODO: Implement proper audio streaming once we have access to raw audio chunks
 
   useEffect(() => {
     if (headRef.current && !loading) {
@@ -107,6 +159,33 @@ export default function PracticePage() {
   const handleEmotionClick = (newEmotion: Emotion) => {
     setEmotion(newEmotion);
   };
+
+  const startConversation = useCallback(async () => {
+    if (!agentId) {
+      setError("Missing agent ID");
+      return;
+    }
+
+    try {
+      await conversation.startSession({
+        agentId: agentId,
+      });
+    } catch (err) {
+      console.error("Failed to start conversation:", err);
+      setError(err instanceof Error ? err.message : "Failed to start");
+    }
+  }, [agentId, conversation]);
+
+  const endConversation = useCallback(async () => {
+    try {
+      console.log("🛑 Ending conversation");
+      await conversation.endSession();
+      setEmotion("neutral");
+      setIsStreaming(false);
+    } catch (err) {
+      console.error("Failed to end conversation:", err);
+    }
+  }, [conversation]);
 
   if (!agentId) {
     return (
@@ -150,10 +229,13 @@ export default function PracticePage() {
           {/* Connection Status */}
           <div className="text-center">
             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
-              isConnected ? "bg-green-500" : "bg-gray-500"
+              conversation.status === "connected" ? "bg-green-500" : "bg-gray-500"
             } text-white`}>
-              <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-white animate-pulse" : "bg-white/50"}`}></div>
-              {isConnected ? "Connected to Agent" : "Not Connected"}
+              <div className={`w-2 h-2 rounded-full ${
+                conversation.status === "connected" ? "bg-white animate-pulse" : "bg-white/50"
+              }`}></div>
+              {conversation.status === "connected" ? "Connected" : "Not Connected"}
+              {conversation.isSpeaking && " - Speaking"}
             </div>
           </div>
 
@@ -208,37 +290,22 @@ export default function PracticePage() {
             </Link>
           </div>
 
-          {/* ElevenLabs Conversation Bar */}
-          <ConversationBar
-            agentId={agentId}
-            onConnect={() => {
-              console.log("Connected to ElevenLabs agent");
-              setIsConnected(true);
-            }}
-            onDisconnect={() => {
-              console.log("Disconnected from ElevenLabs agent");
-              setIsConnected(false);
-              setEmotion("neutral");
-            }}
-            onMessage={(message) => {
-              console.log("Message received:", message);
-              if (message.source === 'ai' && message.message) {
-                setEmotion("talking");
-                if (headRef.current) {
-                  headRef.current.speakText(message.message);
-                }
-                // Reset to neutral after speaking
-                setTimeout(() => {
-                  setEmotion("neutral");
-                }, 3000);
-              }
-            }}
-            onError={(error) => {
-              console.error("ElevenLabs error:", error);
-              setError(error.message || "Connection error");
-              setIsConnected(false);
-            }}
-          />
+          {/* Start/End Conversation button */}
+          <button
+            onClick={conversation.status === "connected" ? endConversation : startConversation}
+            disabled={loading || conversation.status === "connecting"}
+            className={`w-full py-4 rounded-full font-semibold text-lg transition-colors ${
+              conversation.status === "connected"
+                ? "bg-red-500 hover:bg-red-600 text-white"
+                : "bg-green-500 hover:bg-green-600 text-white"
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {conversation.status === "connecting"
+              ? "Connecting..."
+              : conversation.status === "connected"
+                ? "End Conversation"
+                : "Start Conversation"}
+          </button>
 
           <div className="text-white text-center text-sm rotate-90 absolute right-0 top-1/2 origin-right">
             interest-o-meter
