@@ -39,8 +39,8 @@ export default function PracticePage() {
         setIsStreaming(false);
       }
     },
-    onMessage: (message) => {
 
+    onMessage: (message: any) => {
         console.log(message, 'here is message')
 
         if(message.source === 'ai' && headRef.current) {
@@ -61,7 +61,7 @@ export default function PracticePage() {
     },
     onError: (error) => {
       console.error("❌ ElevenLabs Error:", error);
-      setError(error.message);
+      setError(error);
     },
     onModeChange: (mode) => {
       console.log("🔄 Mode changed to:", mode);
@@ -122,6 +122,7 @@ export default function PracticePage() {
         loadImportMap();
         await new Promise(resolve => setTimeout(resolve, 100));
 
+        // @ts-ignore - Dynamic import of external CDN module
         const module = await import(/* webpackIgnore: true */ "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.5/modules/talkinghead.mjs");
         const TalkingHead = module.TalkingHead;
 
@@ -249,6 +250,7 @@ export default function PracticePage() {
     try {
       await conversation.startSession({
         agentId: agentId,
+        connectionType: "websocket" as const,
       });
     } catch (err) {
       console.error("Failed to start conversation:", err);
