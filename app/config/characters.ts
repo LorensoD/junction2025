@@ -25,9 +25,9 @@ export const characters: Character[] = [
     agentId: 'agent_6701ka3p5g34evav5h5yn3a1r98q',
     goal: "Listen to their idea and provide constructive feedback without dismissing them",
     objectives: [
-      { id: "listen", description: "Listen to Alex's full idea without interrupting", completed: false },
-      { id: "acknowledge", description: "Acknowledge the good aspects of the idea", completed: false },
-      { id: "suggest", description: "Provide constructive suggestions for improvement", completed: false }
+      { id: "listen", description: "Find out about their project", completed: false },
+      // { id: "acknowledge", description: "Acknowledge the good aspects of the idea", completed: false },
+      // { id: "suggest", description: "Provide constructive suggestions for improvement", completed: false }
     ],
     description: "An enthusiastic teammate who has a genuinely good idea but presents it in an annoying way",
     position: { x: 25, y: 40 }
@@ -40,8 +40,8 @@ export const characters: Character[] = [
     agentId: 'agent_0301ka3p51kcevfvty4zjqxz2qz0',
     goal: "Motivate them to contribute to the project",
     objectives: [
-      { id: "understand", description: "Understand why Jordan is unmotivated", completed: false },
-      { id: "encourage", description: "Find something that excites Jordan about the project", completed: false }
+      { id: "encourage", description: "Motivate John to participate", completed: false },
+      // { id: "encourage2", description: "Find something that excites Jordan about the project", completed: false }
     ],
     description: "A team member who seems disengaged and needs motivation",
     position: { x: 75, y: 60 }
@@ -54,9 +54,9 @@ export const characters: Character[] = [
     agentId: 'agent_1201ka3jnv0mea5bsqkt2gt1j4mz',
     goal: "Present your hackathon project confidently and handle their tough questions",
     objectives: [
-      { id: "pitch", description: "Deliver a clear and confident pitch", completed: false },
-      { id: "handle-criticism", description: "Handle Morgan's tough questions professionally", completed: false },
-      { id: "defend", description: "Defend your project's value proposition", completed: false }
+      { id: "pitch", description: "Convince the judge to make your team win", completed: false },
+      // { id: "handle-criticism", description: "Handle Morgan's tough questions professionally", completed: false },
+      // { id: "defend", description: "Defend your project's value proposition", completed: false }
     ],
     description: "A judge with a sharp tongue who will challenge your project pitch",
     position: { x: 50, y: 25 }
