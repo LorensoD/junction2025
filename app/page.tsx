@@ -8,7 +8,7 @@ export default function Home() {
       {/* Fullscreen Map Background */}
       <div className="absolute inset-0">
         <Image
-          src="/map.jpg.webp"
+          src="/map2.jpg.webp"
           alt="Hackathon venue map"
           fill
           className="object-cover"
