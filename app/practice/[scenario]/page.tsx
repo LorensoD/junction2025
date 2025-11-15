@@ -4,9 +4,15 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from 'next/navigation'
 import { useConversation } from "@elevenlabs/react";
-import { characters } from "@/app/config/characters";
+import { characters, Objective } from "@/app/config/characters";
 
 type Emotion = "neutral" | "talking" | "happy" | "mad" | "sad";
+
+interface ConversationMessage {
+  source: 'user' | 'ai';
+  message: string;
+  timestamp: number;
+}
 
 export default function PracticePage() {
   const [emotion, setEmotion] = useState<Emotion>("neutral");
@@ -14,6 +20,9 @@ export default function PracticePage() {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState<string>("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [objectives, setObjectives] = useState<Objective[]>([]);
+  const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -24,6 +33,75 @@ export default function PracticePage() {
   // Find the character based on the route parameter
   const character = characters.find(c => c.id === params.scenario);
   const agentId = character?.agentId || process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID;
+
+  // Load objectives from localStorage or character config
+  useEffect(() => {
+    if (!character) return;
+
+    const storageKey = `objectives_${character.id}`;
+    const stored = localStorage.getItem(storageKey);
+
+    if (stored) {
+      setObjectives(JSON.parse(stored));
+    } else {
+      setObjectives(character.objectives);
+    }
+  }, [character]);
+
+  // Save objectives to localStorage whenever they change
+  useEffect(() => {
+    if (!character || objectives.length === 0) return;
+    const storageKey = `objectives_${character.id}`;
+    localStorage.setItem(storageKey, JSON.stringify(objectives));
+  }, [objectives, character]);
+
+  // Analyze conversation periodically
+  const analyzeConversation = useCallback(async () => {
+    if (!character || conversationMessages.length < 2 || isAnalyzing) return;
+
+    setIsAnalyzing(true);
+    try {
+      const response = await fetch('/api/analyze-conversation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: conversationMessages,
+          objectives: objectives,
+          characterName: character.name
+        })
+      });
+
+      const analysis = await response.json();
+      console.log('📊 Analysis received:', analysis);
+
+      // Update objectives based on analysis
+      if (analysis.objectives) {
+        console.log('🎯 Updating objectives:', analysis.objectives);
+        setObjectives(prev => {
+          const updated = prev.map(obj => {
+            const analyzed = analysis.objectives.find((a: any) => a.id === obj.id);
+            if (analyzed) {
+              console.log(`  - ${obj.id}: ${obj.completed} -> ${analyzed.completed} (${analyzed.reason})`);
+              return { ...obj, completed: analyzed.completed };
+            }
+            return obj;
+          });
+          console.log('✅ New objectives state:', updated);
+          return updated;
+        });
+      }
+
+      // Update emotion based on analysis
+      if (analysis.emotion && analysis.emotion !== 'talking') {
+        console.log('😊 Updating emotion to:', analysis.emotion, '(', analysis.emotionReason, ')');
+        setEmotion(analysis.emotion);
+      }
+    } catch (err) {
+      console.error('Failed to analyze conversation:', err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [character, conversationMessages, objectives, isAnalyzing]);
 
   // Initialize ElevenLabs Conversation
   const conversation = useConversation({
@@ -40,23 +118,19 @@ export default function PracticePage() {
       }
     },
     onMessage: (message) => {
-      console.log(message, 'here is message')
-
-      // Trigger lip-sync animation for AI messages
-      // Since mixerGainSpeech is 0, TalkingHead won't play audio but will animate lips
-      if(message.source === 'ai' && headRef.current && message.message) {
-        console.log("🗣️ Triggering lip-sync for:", message.message.substring(0, 50));
-        try {
-          headRef.current.speakText(message.message);
-        } catch (error) {
-          console.error("Failed to trigger lip-sync:", error);
-        }
-      }
-
       console.log("📨 Message received:", {
         source: message.source,
         message: message.message?.substring(0, 100)
       });
+
+      // Store message for analysis
+      if (message.message) {
+        setConversationMessages(prev => [...prev, {
+          source: message.source,
+          message: message.message,
+          timestamp: Date.now()
+        }]);
+      }
     },
     onError: (error) => {
       console.error("❌ ElevenLabs Error:", error);
@@ -194,9 +268,12 @@ export default function PracticePage() {
     }
   }, [emotion, loading]);
 
-  const handleEmotionClick = (newEmotion: Emotion) => {
-    setEmotion(newEmotion);
-  };
+  // Trigger analysis every 4 messages (2 exchanges)
+  useEffect(() => {
+    if (conversationMessages.length > 0 && conversationMessages.length % 4 === 0) {
+      analyzeConversation();
+    }
+  }, [conversationMessages, analyzeConversation]);
 
   const startConversation = useCallback(async () => {
     if (!agentId) {
@@ -207,13 +284,25 @@ export default function PracticePage() {
     try {
       await conversation.startSession({
         agentId: agentId,
-        connectionType: "webrtc",
+        connectionType: "websocket" as const,
       });
     } catch (err) {
       console.error("Failed to start conversation:", err);
       setError(err instanceof Error ? err.message : "Failed to start");
     }
   }, [agentId, conversation]);
+
+  // Auto-start conversation when avatar loads
+  useEffect(() => {
+    if (!loading && !error && conversation.status === "disconnected" && agentId) {
+      console.log("🚀 Auto-starting conversation");
+      startConversation();
+    }
+  }, [loading, error, conversation.status, agentId, startConversation]);
+
+  const handleEmotionClick = (newEmotion: Emotion) => {
+    setEmotion(newEmotion);
+  };
 
   const endConversation = useCallback(async () => {
     try {
@@ -248,24 +337,60 @@ export default function PracticePage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-purple-600">
-      <main className="relative w-full max-w-md h-screen flex flex-col">
-        {/* Header */}
-        <div className="p-6 text-center">
-          <h1 className="text-2xl font-bold text-white">{character.title}</h1>
-          <h2 className="text-lg text-white/90 mt-2">
-            {character.name}
-          </h2>
-          <div className="mt-3 px-4 py-2 bg-white/20 rounded-lg text-white text-sm">
-            🎯 Goal: {character.goal}
+    <div className="flex min-h-screen bg-purple-600">
+      <main className="relative w-full max-w-md mx-auto h-screen flex flex-col">
+        {/* Back Button - Top */}
+        <div className="p-4 flex items-center">
+          <Link
+            href="/"
+            className="px-4 py-2 bg-white/20 text-white rounded-full hover:bg-white/30 transition-colors text-sm"
+          >
+            ← Back to Map
+          </Link>
+        </div>
+
+        {/* Header with Character Info */}
+        <div className="px-6 pb-2">
+          <h1 className="text-xl font-bold text-white">{character.name}</h1>
+          <p className="text-sm text-white/80">{character.title}</p>
+        </div>
+
+        {/* Objectives Checklist */}
+        <div className="px-6 pb-3">
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
+            <div className="text-white text-xs font-semibold mb-2">OBJECTIVES:</div>
+            <div className="space-y-1">
+              {objectives.map((objective) => (
+                <label
+                  key={objective.id}
+                  className="flex items-center gap-2 text-white text-sm cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={objective.completed}
+                    disabled
+                    className="w-4 h-4 rounded border-white/30 bg-white/20 checked:bg-green-500"
+                  />
+                  <span className={objective.completed ? 'line-through opacity-60' : ''}>
+                    {objective.description}
+                  </span>
+                </label>
+              ))}
+            </div>
+            {isAnalyzing && (
+              <div className="mt-2 text-xs text-white/60 flex items-center gap-1">
+                <div className="w-3 h-3 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></div>
+                Analyzing conversation...
+              </div>
+            )}
           </div>
         </div>
 
         {/* Avatar */}
-        <div className="flex-1 flex items-center justify-center relative">
+        <div className="flex-1 flex items-center justify-center relative min-h-0">
           <div
             ref={avatarRef}
-            className="w-full h-full max-h-[500px]"
+            className="w-full h-full"
             style={{ background: 'transparent' }}
           />
           {loading && (
@@ -277,93 +402,29 @@ export default function PracticePage() {
           )}
         </div>
 
-        {/* Bottom controls */}
-        <div className="p-6 flex flex-col gap-4">
-          {/* Connection Status */}
-          <div className="text-center">
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
-              conversation.status === "connected" ? "bg-green-500" : "bg-gray-500"
-            } text-white`}>
-              <div className={`w-2 h-2 rounded-full ${
-                conversation.status === "connected" ? "bg-white animate-pulse" : "bg-white/50"
-              }`}></div>
-              {conversation.status === "connected" ? "Connected" : "Not Connected"}
-              {conversation.isSpeaking && " - Speaking"}
-            </div>
-          </div>
-
-          {/* Emotion buttons */}
-          <div className="flex gap-2 justify-center flex-wrap">
-            <button
-              onClick={() => handleEmotionClick("neutral")}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                emotion === "neutral" ? "bg-white text-purple-600" : "bg-white/20 text-white"
-              }`}
-            >
-              Neutral
-            </button>
-            <button
-              onClick={() => handleEmotionClick("happy")}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                emotion === "happy" ? "bg-white text-purple-600" : "bg-white/20 text-white"
-              }`}
-            >
-              Happy
-            </button>
-            <button
-              onClick={() => handleEmotionClick("mad")}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                emotion === "mad" ? "bg-white text-purple-600" : "bg-white/20 text-white"
-              }`}
-            >
-              Mad
-            </button>
-            <button
-              onClick={() => handleEmotionClick("sad")}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                emotion === "sad" ? "bg-white text-purple-600" : "bg-white/20 text-white"
-              }`}
-            >
-              Sad
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <Link
-              href="/"
-              className="px-6 py-3 bg-white/20 text-white rounded-full hover:bg-white/30 transition-colors"
-            >
-              Back
-            </Link>
-            <Link
-              href={`/statistics/${params.scenario}`}
-              className="px-6 py-3 bg-white/20 text-white rounded-full hover:bg-white/30 transition-colors"
-            >
-              View Stats
-            </Link>
-          </div>
-
-          {/* Start/End Conversation button */}
-          <button
-            onClick={conversation.status === "connected" ? endConversation : startConversation}
-            disabled={loading || conversation.status === "connecting"}
-            className={`w-full py-4 rounded-full font-semibold text-lg transition-colors ${
-              conversation.status === "connected"
-                ? "bg-red-500 hover:bg-red-600 text-white"
-                : "bg-green-500 hover:bg-green-600 text-white"
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            {conversation.status === "connecting"
-              ? "Connecting..."
-              : conversation.status === "connected"
-                ? "End Conversation"
-                : "Start Conversation"}
-          </button>
-
-          <div className="text-white text-center text-sm rotate-90 absolute right-0 top-1/2 origin-right">
-            interest-o-meter
+        {/* Connection Status */}
+        <div className="px-6 py-2 text-center">
+          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs ${
+            conversation.status === "connected" ? "bg-green-500" : "bg-gray-500"
+          } text-white`}>
+            <div className={`w-2 h-2 rounded-full ${
+              conversation.status === "connected" ? "bg-white animate-pulse" : "bg-white/50"
+            }`}></div>
+            {conversation.status === "connected" ? "Connected" : "Connecting..."}
+            {conversation.isSpeaking && " - Speaking"}
           </div>
         </div>
+
+        {/* Hidden: Emotion buttons (commented out) */}
+        {/* <div className="px-6 py-2 flex gap-2 justify-center flex-wrap">
+          <button onClick={() => handleEmotionClick("neutral")} className="px-3 py-1 rounded-full text-xs">Neutral</button>
+          <button onClick={() => handleEmotionClick("happy")} className="px-3 py-1 rounded-full text-xs">Happy</button>
+          <button onClick={() => handleEmotionClick("mad")} className="px-3 py-1 rounded-full text-xs">Mad</button>
+          <button onClick={() => handleEmotionClick("sad")} className="px-3 py-1 rounded-full text-xs">Sad</button>
+        </div> */}
+
+        {/* Bottom spacing */}
+        <div className="h-8"></div>
       </main>
     </div>
   );
