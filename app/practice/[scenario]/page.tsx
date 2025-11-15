@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useParams } from 'next/navigation'
 
 type Emotion = "neutral" | "talking" | "happy" | "mad" | "sad";
 
-export default function PracticePage({ params }: { params: { scenario: string } }) {
+export default function PracticePage() {
   const [isListening, setIsListening] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [emotion, setEmotion] = useState<Emotion>("neutral");
@@ -18,6 +19,7 @@ export default function PracticePage({ params }: { params: { scenario: string } 
   const wsRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+    const params = useParams<{ tag: string; item: string }>()
 
   const scenarioTitles: Record<string, string> = {
     "sell-pen": "Sell this pen",
