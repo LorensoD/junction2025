@@ -16,6 +16,8 @@ export default function PracticePage() {
   const avatarRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const audioQueueRef = useRef<{ buffer: AudioBuffer; timestamp: number }[]>([]);
+  const isPlayingRef = useRef(false);
   const params = useParams<{ scenario: string }>();
 
   const agentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID;
@@ -45,9 +47,13 @@ export default function PracticePage() {
         console.log(message, 'here is message')
 
         if(message.source === 'ai' && headRef.current) {
-            // Trigger lip sync animation without audio playback
+            // Trigger lip sync animation with a 250ms delay
             // Audio is muted via avatarMute: true in initialization
-            headRef.current.speakText(message.message);
+            setTimeout(() => {
+              if (headRef.current) {
+                headRef.current.speakText(message.message);
+              }
+            }, 500);
         }
 
       console.log("📨 Message received:", {
@@ -64,51 +70,33 @@ export default function PracticePage() {
       console.log("🔄 Mode changed to:", mode);
     },
     onAudio: async (base64Audio) => {
-        // console.log(base64Audio)
-        //
-        // headRef.current?.streamAudio({
-        //     sampleRate: 16000,
-        //     audio: base64Audio
-        // });
-
-      // ✨ This callback receives PCM audio chunks from ElevenLabs!
-      // if (!headRef.current) return;
-      //
-      // try {
-      //   // Start streaming session if not already started
-      //   if (!isStreaming) {
-      //     console.log("🎬 Starting TalkingHead stream from onAudio");
-      //     await headRef.current.streamStart(
-      //       {
-      //         sampleRate: 16000, // ElevenLabs conversational AI uses 16kHz PCM
-      //         lipsyncLang: 'en',
-      //         lipsyncType: 'visemes',
-      //         waitForAudioChunks: true,
-      //         mood: 'neutral'
-      //       },
-      //       () => {
-      //         console.log("🎤 TalkingHead playback started");
-      //         setEmotion("talking");
-      //         setIsStreaming(true);
-      //       },
-      //       () => {
-      //         console.log("🛑 TalkingHead playback ended");
-      //         setEmotion("neutral");
-      //         setIsStreaming(false);
-      //       }
-      //     );
-      //   }
-      //
-      //   // Send audio chunk to TalkingHead for lip-sync and playback
-      //   if (headRef.current && (isStreaming || conversation.isSpeaking)) {
-      //     headRef.current.streamAudio({
-      //       audio: audioData // TalkingHead expects ArrayBuffer of Int16 PCM
-      //     });
-      //     console.log("📨 Streamed", audioData.byteLength, "bytes to TalkingHead");
-      //   }
-      // } catch (err) {
-      //   console.error("❌ Error in onAudio:", err);
-      // }
+      // Implement delayed audio playback using Web Audio API
+      if (!audioContextRef.current || !headRef.current) return;
+      
+      try {
+        // Decode base64 audio to ArrayBuffer
+        const binaryString = atob(base64Audio);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Decode audio data
+        const audioBuffer = await audioContextRef.current.decodeAudioData(bytes.buffer);
+        
+        // Add 250ms delay before playing
+        setTimeout(() => {
+          if (audioContextRef.current && audioBuffer) {
+            const source = audioContextRef.current.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioContextRef.current.destination);
+            source.start(0);
+          }
+        }, 250);
+        
+      } catch (err) {
+        console.error("❌ Error in onAudio:", err);
+      }
     },
   });
 
