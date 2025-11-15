@@ -41,18 +41,18 @@ export default function PracticePage() {
     },
 
     onMessage: (message: any) => {
-        console.log(message, 'here is message')
-
-        if(message.source === 'ai' && headRef.current) {
-            headRef.current.speakText(message.message);
-            // Trigger lip sync animation with a 250ms delay
-            // Audio is muted via avatarMute: true in initialization
-            setTimeout(() => {
-              if (headRef.current) {
-                headRef.current.speakText(message.message);
-              }
-            }, 500);
-        }
+        // console.log(message, 'here is message')
+        //
+        // if(message.source === 'ai' && headRef.current) {
+        //     headRef.current.speakText(message.message);
+        //     // Trigger lip sync animation with a 250ms delay
+        //     // Audio is muted via avatarMute: true in initialization
+        //     setTimeout(() => {
+        //       if (headRef.current) {
+        //         headRef.current.speakText(message.message);
+        //       }
+        //     }, 500);
+        // }
 
       console.log("📨 Message received:", {
         source: message.source,
@@ -65,36 +65,7 @@ export default function PracticePage() {
     },
     onModeChange: (mode) => {
       console.log("🔄 Mode changed to:", mode);
-    },
-    onAudio: async (base64Audio) => {
-      // Implement delayed audio playback using Web Audio API
-      if (!audioContextRef.current || !headRef.current) return;
-
-      try {
-        // Decode base64 audio to ArrayBuffer
-        const binaryString = atob(base64Audio);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-
-        // Decode audio data
-        const audioBuffer = await audioContextRef.current.decodeAudioData(bytes.buffer);
-
-        // Add 250ms delay before playing
-        setTimeout(() => {
-          if (audioContextRef.current && audioBuffer) {
-            const source = audioContextRef.current.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(audioContextRef.current.destination);
-            source.start(0);
-          }
-        }, 250);
-
-      } catch (err) {
-        console.error("❌ Error in onAudio:", err);
-      }
-    },
+    }
   });
 
   useEffect(() => {
@@ -158,21 +129,6 @@ export default function PracticePage() {
             setLoadingProgress(progress);
           }
         });
-
-        // Mute all audio elements created by TalkingHead to prevent double audio
-        // We only need lip sync, not audio playback
-        const muteAvatarAudio = () => {
-          const audioElements = document.querySelectorAll('audio');
-          audioElements.forEach(audio => {
-            audio.muted = true;
-            audio.volume = 0;
-          });
-        };
-        muteAvatarAudio();
-
-        // Set up mutation observer to mute any new audio elements
-        const observer = new MutationObserver(muteAvatarAudio);
-        observer.observe(document.body, { childList: true, subtree: true });
 
         setLoading(false);
       } catch (err) {
