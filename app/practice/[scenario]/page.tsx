@@ -31,17 +31,82 @@ export default function PracticePage() {
     onConnect: () => {
       console.log("✅ Connected to ElevenLabs");
     },
-    onDisconnect: () => {
-      console.log("❌ Disconnected from ElevenLabs");
+    onDisconnect: (reason) => {
+      console.log("❌ Disconnected from ElevenLabs. Reason:", reason);
       setEmotion("neutral");
-      setIsStreaming(false);
+      if (isStreaming && headRef.current) {
+        console.log("🛑 Stopping TalkingHead stream due to disconnect");
+        headRef.current.streamStop();
+        setIsStreaming(false);
+      }
     },
     onMessage: (message) => {
-      console.log("📨 Message:", message);
+
+        console.log(message, 'here is message')
+
+        if(message.source === 'ai') {
+            headRef.current.speakText(message.message)
+        }
+
+      console.log("📨 Message received:", {
+        type: message.type,
+        role: message.role,
+        content: message.content?.substring(0, 100)
+      });
     },
     onError: (error) => {
-      console.error("❌ Error:", error);
+      console.error("❌ ElevenLabs Error:", error);
       setError(error.message);
+    },
+    onModeChange: (mode) => {
+      console.log("🔄 Mode changed to:", mode);
+    },
+    onAudio: async (base64Audio) => {
+        // console.log(base64Audio)
+        //
+        // headRef.current?.streamAudio({
+        //     sampleRate: 16000,
+        //     audio: base64Audio
+        // });
+
+      // ✨ This callback receives PCM audio chunks from ElevenLabs!
+      // if (!headRef.current) return;
+      //
+      // try {
+      //   // Start streaming session if not already started
+      //   if (!isStreaming) {
+      //     console.log("🎬 Starting TalkingHead stream from onAudio");
+      //     await headRef.current.streamStart(
+      //       {
+      //         sampleRate: 16000, // ElevenLabs conversational AI uses 16kHz PCM
+      //         lipsyncLang: 'en',
+      //         lipsyncType: 'visemes',
+      //         waitForAudioChunks: true,
+      //         mood: 'neutral'
+      //       },
+      //       () => {
+      //         console.log("🎤 TalkingHead playback started");
+      //         setEmotion("talking");
+      //         setIsStreaming(true);
+      //       },
+      //       () => {
+      //         console.log("🛑 TalkingHead playback ended");
+      //         setEmotion("neutral");
+      //         setIsStreaming(false);
+      //       }
+      //     );
+      //   }
+      //
+      //   // Send audio chunk to TalkingHead for lip-sync and playback
+      //   if (headRef.current && (isStreaming || conversation.isSpeaking)) {
+      //     headRef.current.streamAudio({
+      //       audio: audioData // TalkingHead expects ArrayBuffer of Int16 PCM
+      //     });
+      //     console.log("📨 Streamed", audioData.byteLength, "bytes to TalkingHead");
+      //   }
+      // } catch (err) {
+      //   console.error("❌ Error in onAudio:", err);
+      // }
     },
   });
 
@@ -139,9 +204,14 @@ export default function PracticePage() {
     }
   }, [conversation.isSpeaking]);
 
-  // For now, we'll let ElevenLabs handle audio playback
-  // And just sync the avatar lip movements manually
-  // TODO: Implement proper audio streaming once we have access to raw audio chunks
+  // Clean up streaming when conversation ends
+  useEffect(() => {
+    if (conversation.status === "disconnected" && isStreaming && headRef.current) {
+      console.log("🧹 Cleaning up TalkingHead stream");
+      headRef.current.streamStop();
+      setIsStreaming(false);
+    }
+  }, [conversation.status, isStreaming]);
 
   useEffect(() => {
     if (headRef.current && !loading) {
