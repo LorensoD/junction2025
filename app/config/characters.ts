@@ -16,6 +16,7 @@ export interface Character {
   objectives: Objective[]; // Specific tasks/challenges to complete
   description: string;
   position: { x: number; y: number }; // Position on the map (percentage)
+  scoreImpact: number; // How much this character contributes to global score (0-100)
 }
 
 export const characters: Character[] = [
@@ -34,7 +35,8 @@ export const characters: Character[] = [
       // { id: "suggest", description: "Provide constructive suggestions for improvement", completed: false }
     ],
     description: "An enthusiastic teammate who has a genuinely good idea but presents it in an annoying way",
-    position: { x: 25, y: 40 }
+    position: { x: 25, y: 40 },
+    scoreImpact: 30
   },
   {
     id: "unmotivated-teammate",
@@ -50,7 +52,8 @@ export const characters: Character[] = [
       // { id: "encourage2", description: "Find something that excites Jordan about the project", completed: false }
     ],
     description: "A team member who seems disengaged and needs motivation",
-    position: { x: 75, y: 60 }
+    position: { x: 75, y: 60 },
+    scoreImpact: 30
   },
   {
     id: "judge",
@@ -67,6 +70,7 @@ export const characters: Character[] = [
       // { id: "defend", description: "Defend your project's value proposition", completed: false }
     ],
     description: "A judge with a sharp tongue who will challenge your project pitch",
-    position: { x: 50, y: 25 }
+    position: { x: 50, y: 25 },
+    scoreImpact: 40
   }
 ];
