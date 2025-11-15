@@ -41,22 +41,33 @@ export default function PracticePage() {
       }
     },
     onMessage: (message) => {
+      console.log(message, 'here is message')
 
-        console.log(message, 'here is message')
-
-        if(message.source === 'ai') {
-            headRef.current.speakText(message.message)
+      // Trigger lip-sync animation for AI messages
+      // Since mixerGainSpeech is 0, TalkingHead won't play audio but will animate lips
+      if(message.source === 'ai' && headRef.current && message.message) {
+        console.log("🗣️ Triggering lip-sync for:", message.message.substring(0, 50));
+        try {
+          headRef.current.speakText(message.message);
+        } catch (error) {
+          console.error("Failed to trigger lip-sync:", error);
         }
+      }
 
       console.log("📨 Message received:", {
-        type: message.type,
-        role: message.role,
-        content: message.content?.substring(0, 100)
+        source: message.source,
+        message: message.message?.substring(0, 100)
       });
     },
     onError: (error) => {
       console.error("❌ ElevenLabs Error:", error);
-      setError(error.message);
+      if (typeof error === 'string') {
+        setError(error);
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        setError((error as Error).message);
+      } else {
+        setError('An error occurred');
+      }
     },
     onModeChange: (mode) => {
       console.log("🔄 Mode changed to:", mode);
@@ -135,15 +146,18 @@ export default function PracticePage() {
         loadImportMap();
         await new Promise(resolve => setTimeout(resolve, 100));
 
+        // @ts-ignore - Dynamic CDN import
         const module = await import(/* webpackIgnore: true */ "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.5/modules/talkinghead.mjs");
         const TalkingHead = module.TalkingHead;
 
-        // Initialize without TTS - we'll use streaming from ElevenLabs
+        // Initialize with TTS endpoint (required by TalkingHead)
+        // Set mixerGainSpeech to 0 to mute TalkingHead's audio while keeping lip-sync
         headRef.current = new TalkingHead(avatarRef.current, {
           ttsEndpoint: "https://eu-texttospeech.googleapis.com/v1beta1/text:synthesize",
           ttsApikey: process.env.NEXT_PUBLIC_GOOGLE_TTS_API_KEY || "",
           lipsyncModules: ["en"],
-          cameraView: "upper"
+          cameraView: "upper",
+          mixerGainSpeech: 0, // Mute TalkingHead's speech audio (keeps ElevenLabs audio)
         });
 
         // Initialize AudioContext for audio processing
@@ -162,6 +176,8 @@ export default function PracticePage() {
             setLoadingProgress(progress);
           }
         });
+
+
 
         setLoading(false);
       } catch (err) {
@@ -192,13 +208,13 @@ export default function PracticePage() {
     });
   }, [conversation.status, conversation.isSpeaking, isStreaming]);
 
-  // Don't auto-start streaming - ElevenLabs handles audio playback
-  // We'll just update the emotion state based on speaking
+  // Monitor conversation state and update avatar talking animation
   useEffect(() => {
-    if (conversation.isSpeaking) {
-      console.log("🗣️ Agent is speaking");
+    if (conversation.isSpeaking && headRef.current) {
+      console.log("🗣️ Agent is speaking - avatar should show talking animation");
       setEmotion("talking");
-    } else {
+      // TalkingHead will automatically show subtle mouth movements in talking state
+    } else if (!conversation.isSpeaking && headRef.current) {
       console.log("🤐 Agent stopped speaking");
       setEmotion("neutral");
     }
@@ -239,6 +255,7 @@ export default function PracticePage() {
     try {
       await conversation.startSession({
         agentId: agentId,
+        connectionType: "webrtc",
       });
     } catch (err) {
       console.error("Failed to start conversation:", err);
