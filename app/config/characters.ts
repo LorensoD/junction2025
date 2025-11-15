@@ -28,7 +28,7 @@ export const characters: Character[] = [
     backgroundImage: "/Random_hacker.jpg.webp",
     faceImage: "/faces/oponent.png",
     agentId: 'agent_6701ka3p5g34evav5h5yn3a1r98q',
-    goal: "Listen to their idea and provide constructive feedback without dismissing them",
+    goal: "Try to figure out what their idea is",
     objectives: [
       { id: "listen", description: "Find out about their project", completed: false },
       // { id: "acknowledge", description: "Acknowledge the good aspects of the idea", completed: false },
@@ -63,7 +63,7 @@ export const characters: Character[] = [
     backgroundImage: "/Judge.jpg.webp",
     faceImage: "/faces/judge.png",
     agentId: 'agent_1201ka3jnv0mea5bsqkt2gt1j4mz',
-    goal: "Present your hackathon project confidently and handle their tough questions",
+    goal: "Present your hackathon project confidently",
     objectives: [
       { id: "pitch2", description: "Convince the judge to make your team win", completed: false },
       // { id: "handle-criticism", description: "Handle Morgan's tough questions professionally", completed: false },
