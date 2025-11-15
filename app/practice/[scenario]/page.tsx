@@ -44,8 +44,10 @@ export default function PracticePage() {
 
         console.log(message, 'here is message')
 
-        if(message.source === 'ai') {
-            headRef.current.speakText(message.message)
+        if(message.source === 'ai' && headRef.current) {
+            // Trigger lip sync animation without audio playback
+            // Audio is muted via avatarMute: true in initialization
+            headRef.current.speakText(message.message);
         }
 
       console.log("📨 Message received:", {
@@ -138,12 +140,14 @@ export default function PracticePage() {
         const module = await import(/* webpackIgnore: true */ "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.5/modules/talkinghead.mjs");
         const TalkingHead = module.TalkingHead;
 
-        // Initialize without TTS - we'll use streaming from ElevenLabs
+        // Initialize with TTS but we'll mute the audio output
+        // Audio is only needed for lip sync, not for playback
         headRef.current = new TalkingHead(avatarRef.current, {
           ttsEndpoint: "https://eu-texttospeech.googleapis.com/v1beta1/text:synthesize",
           ttsApikey: process.env.NEXT_PUBLIC_GOOGLE_TTS_API_KEY || "",
           lipsyncModules: ["en"],
-          cameraView: "upper"
+          cameraView: "upper",
+          avatarMute: true  // Mute avatar's audio output
         });
 
         // Initialize AudioContext for audio processing
@@ -162,6 +166,21 @@ export default function PracticePage() {
             setLoadingProgress(progress);
           }
         });
+
+        // Mute all audio elements created by TalkingHead to prevent double audio
+        // We only need lip sync, not audio playback
+        const muteAvatarAudio = () => {
+          const audioElements = document.querySelectorAll('audio');
+          audioElements.forEach(audio => {
+            audio.muted = true;
+            audio.volume = 0;
+          });
+        };
+        muteAvatarAudio();
+        
+        // Set up mutation observer to mute any new audio elements
+        const observer = new MutationObserver(muteAvatarAudio);
+        observer.observe(document.body, { childList: true, subtree: true });
 
         setLoading(false);
       } catch (err) {
