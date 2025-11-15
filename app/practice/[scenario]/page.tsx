@@ -44,6 +44,7 @@ export default function PracticePage() {
         console.log(message, 'here is message')
 
         if(message.source === 'ai' && headRef.current) {
+            headRef.current.speakText(message.message);
             // Trigger lip sync animation with a 250ms delay
             // Audio is muted via avatarMute: true in initialization
             setTimeout(() => {
@@ -54,9 +55,8 @@ export default function PracticePage() {
         }
 
       console.log("📨 Message received:", {
-        type: message.type,
-        role: message.role,
-        content: message.content?.substring(0, 100)
+        source: message.source,
+        message: message.message?.substring(0, 100)
       });
     },
     onError: (error) => {
@@ -69,7 +69,7 @@ export default function PracticePage() {
     onAudio: async (base64Audio) => {
       // Implement delayed audio playback using Web Audio API
       if (!audioContextRef.current || !headRef.current) return;
-      
+
       try {
         // Decode base64 audio to ArrayBuffer
         const binaryString = atob(base64Audio);
@@ -77,10 +77,10 @@ export default function PracticePage() {
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
-        
+
         // Decode audio data
         const audioBuffer = await audioContextRef.current.decodeAudioData(bytes.buffer);
-        
+
         // Add 250ms delay before playing
         setTimeout(() => {
           if (audioContextRef.current && audioBuffer) {
@@ -90,7 +90,7 @@ export default function PracticePage() {
             source.start(0);
           }
         }, 250);
-        
+
       } catch (err) {
         console.error("❌ Error in onAudio:", err);
       }
@@ -168,7 +168,7 @@ export default function PracticePage() {
           });
         };
         muteAvatarAudio();
-        
+
         // Set up mutation observer to mute any new audio elements
         const observer = new MutationObserver(muteAvatarAudio);
         observer.observe(document.body, { childList: true, subtree: true });
