@@ -48,47 +48,48 @@ export default function AwardCeremony() {
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center" style={{ background: 'var(--gradient-bg)' }}>
+      <div className="min-h-screen w-full flex items-center justify-center bg-black">
         <div className="text-white text-2xl animate-pulse">Calculating results...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full relative overflow-hidden">
-      {/* Animated gradient background */}
-      <div className="absolute inset-0" style={{ background: 'var(--gradient-bg)' }}>
-        {/* Animated blobs */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500/30 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-500/30 rounded-full blur-3xl" style={{ animation: 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '700ms' }}></div>
+    <div className="min-h-screen w-full relative overflow-hidden bg-black">
+      {/* Animated green blobs for Junction branding */}
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-green-400/15 rounded-full blur-3xl" style={{ animation: 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '700ms' }}></div>
+        <div className="absolute top-1/2 left-1/2 w-80 h-80 bg-green-300/10 rounded-full blur-3xl" style={{ animation: 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}></div>
+        <div className="absolute top-40 right-20 w-64 h-64 bg-green-500/25 rounded-full blur-3xl" style={{ animation: 'pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite', animationDelay: '1.2s' }}></div>
       </div>
 
       {/* Content */}
       <main className="relative min-h-screen flex flex-col items-center justify-center p-4 md:p-8 z-10">
-        <div className="max-w-3xl w-full bg-white/10 backdrop-blur-xl rounded-3xl border-2 border-white/30 shadow-2xl p-8 md:p-12">
+        <div className="max-w-3xl w-full bg-white/5 backdrop-blur-xl rounded-3xl border-2 border-green-500/30 shadow-[0_0_40px_rgba(34,197,94,0.3)] p-8 md:p-12">
           {/* Result */}
           <div className="text-center mb-8">
             <div className="text-8xl mb-6 animate-bounce">
               {won ? "🏆" : "😔"}
             </div>
-            <h1 className="text-5xl md:text-7xl font-black text-white mb-4" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+            <h1 className="text-5xl md:text-7xl font-black text-white mb-4 drop-shadow-[0_0_30px_rgba(34,197,94,0.5)]">
               {won ? "You Won!" : "Better Luck Next Time"}
             </h1>
-            <p className="text-2xl md:text-3xl text-white/90 font-semibold mb-8">
-              Final Score: <span className="font-black">{globalScore}%</span>
+            <p className="text-2xl md:text-3xl text-white font-semibold mb-8">
+              Final Score: <span className="font-black text-green-400">{globalScore}%</span>
             </p>
           </div>
 
           {/* Feedback */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 p-6 mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl border-2 border-green-500/20 p-6 mb-8">
+            <h2 className="text-2xl font-bold text-white mb-4">
               Performance Summary
             </h2>
             <div className="space-y-3">
               {feedback.map((item, index) => (
                 <div
                   key={index}
-                  className="text-white/95 text-lg bg-white/5 rounded-lg p-3 border border-white/10"
+                  className="text-white text-lg bg-black/40 rounded-lg p-3 border border-green-500/20"
                 >
                   {item}
                 </div>
@@ -97,11 +98,11 @@ export default function AwardCeremony() {
           </div>
 
           {/* Result explanation */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 p-6 mb-8">
-            <h2 className="text-xl font-bold text-white mb-3" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl border-2 border-green-500/20 p-6 mb-8">
+            <h2 className="text-xl font-bold text-white mb-3">
               {won ? "Why You Won" : "Why You Didn't Win"}
             </h2>
-            <p className="text-white/90 text-base leading-relaxed">
+            <p className="text-white text-base leading-relaxed">
               {won
                 ? "You successfully navigated the social dynamics of the hackathon! Your ability to listen to Michael's ideas, motivate John to contribute, and impress Judge Nadia with your pitch secured your team's victory. Great communication skills!"
                 : "While you made progress, you didn't quite achieve all the objectives needed to win. Remember: at hackathons, technical skills matter, but so do teamwork, communication, and presentation abilities. Keep practicing!"}
@@ -112,7 +113,7 @@ export default function AwardCeremony() {
           <div className="flex flex-col sm:flex-row gap-4">
             <Link
               href="/"
-              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-4 px-8 rounded-xl hover:from-purple-400 hover:to-pink-400 transition-all shadow-2xl hover:scale-105 text-center text-lg"
+              className="flex-1 bg-green-500 text-black font-bold py-4 px-8 rounded-xl hover:bg-green-400 transition-all shadow-[0_0_30px_rgba(34,197,94,0.5)] hover:shadow-[0_0_40px_rgba(34,197,94,0.7)] hover:scale-105 text-center text-lg"
             >
               Back to Home
             </Link>
@@ -124,7 +125,7 @@ export default function AwardCeremony() {
                 });
                 window.location.href = "/";
               }}
-              className="flex-1 bg-white/20 backdrop-blur-sm text-white font-bold py-4 px-8 rounded-xl hover:bg-white/30 transition-all border-2 border-white/30 hover:border-white/50 text-center text-lg"
+              className="flex-1 bg-white/10 backdrop-blur-sm text-white font-bold py-4 px-8 rounded-xl hover:bg-white/20 transition-all border-2 border-green-500/30 hover:border-green-500/50 text-center text-lg"
             >
               Try Again
             </button>
