@@ -397,8 +397,23 @@ export default function PracticePage() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--gradient-bg)' }}>
-      <main className="relative w-full max-w-md mx-auto h-screen flex flex-col">
+    <div className="flex min-h-screen relative overflow-hidden">
+      {/* Background Image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: `url(${character.backgroundImage})`
+        }}
+      />
+      {/* Dark gradient overlay for text readability */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.6) 100%)'
+        }}
+      />
+
+      <main className="relative w-full max-w-md mx-auto h-screen flex flex-col z-10">
         {/* Top Bar with Back Button and Live Status */}
         <div className="p-4 flex items-center justify-between">
           <Link
@@ -426,8 +441,12 @@ export default function PracticePage() {
 
         {/* Header with Character Info */}
         <div className="px-6 pb-2">
-          <h1 className="text-2xl font-bold text-white tracking-tight">{character.name}</h1>
-          <p className="text-sm text-white/90 font-medium">{character.title}</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+            {character.name}
+          </h1>
+          <p className="text-sm text-white/90 font-medium" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.7)' }}>
+            {character.title}
+          </p>
         </div>
 
         {/* Objectives Checklist */}

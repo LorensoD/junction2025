@@ -9,6 +9,7 @@ export interface Character {
   name: string;
   title: string;
   modelUrl: string;
+  backgroundImage: string; // Background image for practice page
   agentId?: string; // ElevenLabs agent ID
   goal: string; // Overall goal
   objectives: Objective[]; // Specific tasks/challenges to complete
@@ -22,6 +23,7 @@ export const characters: Character[] = [
     name: "Michael",
     title: "Opposing teammate",
     modelUrl: "https://models.readyplayer.me/6918415bfb99478e41ab217d.glb",
+    backgroundImage: "/Random_hacker.jpg.webp",
     agentId: 'agent_6701ka3p5g34evav5h5yn3a1r98q',
     goal: "Listen to their idea and provide constructive feedback without dismissing them",
     objectives: [
@@ -37,6 +39,7 @@ export const characters: Character[] = [
     name: "John",
     title: "Unmotivated Teammate",
     modelUrl: "https://models.readyplayer.me/691864cc672cca15c2fe3f3a.glb",
+    backgroundImage: "/Lazy_team_mate.jpg.webp",
     agentId: 'agent_0301ka3p51kcevfvty4zjqxz2qz0',
     goal: "Motivate them to contribute to the project",
     objectives: [
@@ -51,6 +54,7 @@ export const characters: Character[] = [
     name: "Nadia",
     title: "Judge",
     modelUrl: "https://models.readyplayer.me/6918653b8e7eb1274343a95d.glb",
+    backgroundImage: "/Judge.jpg.webp",
     agentId: 'agent_1201ka3jnv0mea5bsqkt2gt1j4mz',
     goal: "Present your hackathon project confidently and handle their tough questions",
     objectives: [
