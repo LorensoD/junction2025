@@ -22,8 +22,8 @@ export default function Home() {
       <main className="relative z-10 min-h-screen flex flex-col">
         {/* Header */}
         <div className="text-center pt-6 pb-8 px-4">
-          <h1 className="text-4xl md:text-7xl font-bold mb-3 text-white tracking-tight" style={{ textShadow: '0 4px 20px rgba(0,0,0,0.9)' }}>
-            Hackathon Simulator
+          <h1 className="text-5xl md:text-7xl mb-3 text-white tracking-tight font-black" style={{ textShadow: '0 4px 20px rgba(0,0,0,0.9)' }}>
+            Junction Simulator
           </h1>
           <p className="text-base md:text-2xl text-white/95 font-medium max-w-2xl mx-auto" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
             Navigate social interactions at Junction to win the hackathon
