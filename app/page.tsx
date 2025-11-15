@@ -122,7 +122,15 @@ export default function Home() {
           </div>
 
           {/* Map Card with Enhanced Glassmorphism */}
-          <div className="relative w-full max-w-4xl aspect-video bg-white/10 backdrop-blur-xl rounded-3xl border-2 border-white/30 shadow-2xl hover:border-white/50 hover:bg-white/15 transition-all p-8">
+          <div
+              className="relative w-full max-w-4xl aspect-video bg-white/10 backdrop-blur-xl rounded-3xl border-2 border-white/30 shadow-2xl hover:border-white/50 hover:bg-white/15 transition-all p-8"
+              style={{
+                  backgroundImage: 'url(map3.jpg.webp)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+          }}
+          >
             {characters.map((character) => (
               <Link
                 key={character.id}

@@ -173,7 +173,8 @@
 :root {
   --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  --gradient-bg: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  /*--gradient-bg: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);*/
+  --gradient-bg: linear-gradient(135deg, #545454 0%, #797979 50%, #414141 100%);
   --color-accent-blue: #667eea;
   --color-accent-purple: #764ba2;
   --color-accent-pink: #f093fb;
