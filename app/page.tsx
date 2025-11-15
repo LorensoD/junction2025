@@ -163,11 +163,11 @@ export default function Home() {
 
                   {/* Name & Title */}
                   <div className="text-center">
-                    <div className="font-bold text-white text-base md:text-xl mb-0.5">
-                      {character.name}
-                    </div>
+                    {/*<div className="font-bold text-green-400 text-base md:text-xl mb-0.5">*/}
+                    {/*  {character.name}*/}
+                    {/*</div>*/}
                     <div className="text-xs md:text-sm text-green-400 font-medium px-3 py-1 bg-black/60 backdrop-blur-sm rounded-full border border-green-500/30">
-                      {character.title}
+                        {character.name} - {character.title}
                     </div>
                   </div>
 
