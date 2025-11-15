@@ -12,8 +12,12 @@ export default function PracticePage({ params }: { params: { scenario: string } 
   const [loading, setLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState<string>("");
+  const [isConnected, setIsConnected] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<any>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const scenarioTitles: Record<string, string> = {
     "sell-pen": "Sell this pen",
@@ -23,7 +27,6 @@ export default function PracticePage({ params }: { params: { scenario: string } 
 
   useEffect(() => {
     const loadImportMap = () => {
-      // Check if import map already exists
       if (document.querySelector('script[type="importmap"]')) {
         return;
       }
@@ -45,11 +48,8 @@ export default function PracticePage({ params }: { params: { scenario: string } 
 
       try {
         loadImportMap();
-
-        // Wait a bit for import map to be processed
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Dynamic import of TalkingHead
         const module = await import(/* webpackIgnore: true */ "https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.5/modules/talkinghead.mjs");
         const TalkingHead = module.TalkingHead;
 
@@ -88,6 +88,7 @@ export default function PracticePage({ params }: { params: { scenario: string } 
       if (headRef.current) {
         headRef.current.stop();
       }
+      disconnectAgent();
     };
   }, []);
 
@@ -104,31 +105,156 @@ export default function PracticePage({ params }: { params: { scenario: string } 
     }
   }, [emotion, loading]);
 
-  const toggleListening = () => {
-    setIsListening(!isListening);
-    if (!isListening) {
-      setEmotion("talking");
-      // Simulate feedback after speaking
-      setTimeout(() => {
-        setFeedback("That was not so smart to say");
-        setEmotion("neutral");
-      }, 3000);
-    } else {
-      setEmotion("neutral");
+  const connectToAgent = async () => {
+    const agentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID || "";
+    const apiKey = process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY || "";
+
+    if (!agentId || !apiKey) {
+      setError("Missing ElevenLabs credentials");
+      return;
     }
+
+    try {
+      // Initialize audio context
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+      // Get microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Create MediaRecorder for capturing audio
+      mediaRecorderRef.current = new MediaRecorder(stream, {
+        mimeType: 'audio/webm'
+      });
+
+      // Connect to ElevenLabs Conversational AI WebSocket
+      const ws = new WebSocket(
+        `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${agentId}`
+      );
+
+      ws.onopen = () => {
+        console.log("Connected to ElevenLabs agent");
+        setIsConnected(true);
+
+        // Send initial config
+        ws.send(JSON.stringify({
+          type: "conversation_initiation_client_data",
+          conversation_config_override: {
+            agent: {
+              prompt: {
+                prompt: getScenarioPrompt(params.scenario)
+              }
+            }
+          }
+        }));
+      };
+
+      ws.onmessage = async (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "audio") {
+          // Agent is speaking
+          setEmotion("talking");
+
+          // Decode base64 audio
+          const audioData = atob(data.audio);
+          const audioArray = new Uint8Array(audioData.length);
+          for (let i = 0; i < audioData.length; i++) {
+            audioArray[i] = audioData.charCodeAt(i);
+          }
+
+          // Play audio through TalkingHead
+          if (headRef.current && audioContextRef.current) {
+            const audioBuffer = await audioContextRef.current.decodeAudioData(audioArray.buffer);
+            headRef.current.playAudio(audioBuffer);
+          }
+        } else if (data.type === "interruption") {
+          // User interrupted the agent
+          console.log("Agent interrupted");
+          if (headRef.current) {
+            headRef.current.stopSpeaking();
+          }
+        } else if (data.type === "agent_response_end") {
+          setEmotion("neutral");
+        } else if (data.type === "ping") {
+          ws.send(JSON.stringify({ type: "pong", event_id: data.event_id }));
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        setError("Connection error");
+      };
+
+      ws.onclose = () => {
+        console.log("Disconnected from agent");
+        setIsConnected(false);
+        setEmotion("neutral");
+      };
+
+      wsRef.current = ws;
+
+      // Send audio chunks to agent
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+          // Convert to base64 and send
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64Audio = (reader.result as string).split(',')[1];
+            ws.send(JSON.stringify({
+              type: "user_audio_chunk",
+              audio: base64Audio
+            }));
+          };
+          reader.readAsDataURL(event.data);
+        }
+      };
+
+      // Start recording
+      mediaRecorderRef.current.start(100); // Send chunks every 100ms
+
+    } catch (err) {
+      console.error("Failed to connect to agent:", err);
+      setError(err instanceof Error ? err.message : "Connection failed");
+    }
+  };
+
+  const disconnectAgent = () => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      mediaRecorderRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    setIsConnected(false);
+  };
+
+  const toggleConnection = () => {
+    if (isConnected) {
+      disconnectAgent();
+    } else {
+      connectToAgent();
+    }
+  };
+
+  const getScenarioPrompt = (scenario: string): string => {
+    const prompts: Record<string, string> = {
+      "sell-pen": "You are a potential customer at a store. A salesperson is trying to sell you a pen. Be somewhat skeptical but open to being convinced if they make good points. React naturally to their pitch.",
+      "salary": "You are a hiring manager in a salary negotiation with a candidate. Be professional but firm about the company's budget constraints. Listen to their arguments and respond realistically.",
+      "pickup": "You are at a club. Someone is trying to start a conversation with you. Be natural and react based on what they say - if they're respectful and interesting, be friendly. If they're inappropriate, respond accordingly."
+    };
+    return prompts[scenario] || prompts["sell-pen"];
   };
 
   const handleEmotionClick = (newEmotion: Emotion) => {
     setEmotion(newEmotion);
-    if (newEmotion === "talking" && headRef.current) {
-      headRef.current.speakText("Niclas how about you shut the fuck up");
-    }
   };
-
-    const talk = ()=> {
-        headRef.current.speakText("Hi there. How are you? I'm fine.");
-        headRef.current.speakText("It's so great to meet you");
-    };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-purple-600">
@@ -169,6 +295,16 @@ export default function PracticePage({ params }: { params: { scenario: string } 
 
         {/* Bottom controls */}
         <div className="p-6 flex flex-col gap-4">
+          {/* Connection Status */}
+          <div className="text-center">
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
+              isConnected ? "bg-green-500" : "bg-gray-500"
+            } text-white`}>
+              <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-white animate-pulse" : "bg-white/50"}`}></div>
+              {isConnected ? "Connected to Agent" : "Not Connected"}
+            </div>
+          </div>
+
           {/* Emotion buttons */}
           <div className="flex gap-2 justify-center flex-wrap">
             <button
@@ -178,14 +314,6 @@ export default function PracticePage({ params }: { params: { scenario: string } 
               }`}
             >
               Neutral
-            </button>
-            <button
-              onClick={() => handleEmotionClick("talking")}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                emotion === "talking" ? "bg-white text-purple-600" : "bg-white/20 text-white"
-              }`}
-            >
-              Talking
             </button>
             <button
               onClick={() => handleEmotionClick("happy")}
@@ -211,12 +339,6 @@ export default function PracticePage({ params }: { params: { scenario: string } 
             >
               Sad
             </button>
-
-              <button
-                  onClick={() => talk()}
-              >
-                  SPEAK!
-              </button>
           </div>
 
           <div className="flex items-center justify-between">
@@ -234,15 +356,17 @@ export default function PracticePage({ params }: { params: { scenario: string } 
             </Link>
           </div>
 
-          {/* Microphone button */}
+          {/* Connect/Disconnect button */}
           <button
-            onClick={toggleListening}
-            className={`w-20 h-20 mx-auto rounded-full transition-colors ${
-              isListening ? "bg-red-500" : "bg-white"
-            }`}
-            aria-label={isListening ? "Stop recording" : "Start recording"}
+            onClick={toggleConnection}
+            disabled={loading}
+            className={`w-full py-4 rounded-full font-semibold text-lg transition-colors ${
+              isConnected
+                ? "bg-red-500 hover:bg-red-600 text-white"
+                : "bg-green-500 hover:bg-green-600 text-white"
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            <div className={`w-full h-full rounded-full ${isListening ? "animate-pulse" : ""}`}></div>
+            {isConnected ? "End Conversation" : "Start Conversation"}
           </button>
 
           <div className="text-white text-center text-sm rotate-90 absolute right-0 top-1/2 origin-right">
