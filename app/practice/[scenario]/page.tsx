@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from 'next/navigation'
 import { useConversation } from "@elevenlabs/react";
+import { characters } from "@/app/config/characters";
 
 type Emotion = "neutral" | "talking" | "happy" | "mad" | "sad";
 
@@ -20,13 +21,9 @@ export default function PracticePage() {
   const isPlayingRef = useRef(false);
   const params = useParams<{ scenario: string }>();
 
-  const agentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID;
-
-  const scenarioTitles: Record<string, string> = {
-    "sell-pen": "Sell this pen",
-    "salary": "Salary discussion",
-    "pickup": "Pick up a girl at club",
-  };
+  // Find the character based on the route parameter
+  const character = characters.find(c => c.id === params.scenario);
+  const agentId = character?.agentId || process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID;
 
   // Initialize ElevenLabs Conversation
   const conversation = useConversation({
@@ -141,8 +138,14 @@ export default function PracticePage() {
         // Initialize AudioContext for audio processing
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
 
+        // Use character's specific Ready Player Me model
+        const avatarUrl = character?.modelUrl || 'https://models.readyplayer.me/6918415bfb99478e41ab217d.glb';
+        const fullAvatarUrl = avatarUrl.includes('?')
+          ? `${avatarUrl}&morphTargets=ARKit,Oculus+Visemes,mouthOpen,mouthSmile,eyesClosed,eyesLookUp,eyesLookDown&textureSizeLimit=1024&textureFormat=png`
+          : `${avatarUrl}?morphTargets=ARKit,Oculus+Visemes,mouthOpen,mouthSmile,eyesClosed,eyesLookUp,eyesLookDown&textureSizeLimit=1024&textureFormat=png`;
+
         await headRef.current.showAvatar({
-          url: 'https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb?morphTargets=ARKit,Oculus+Visemes,mouthOpen,mouthSmile,eyesClosed,eyesLookUp,eyesLookDown&textureSizeLimit=1024&textureFormat=png',
+          url: fullAvatarUrl,
           body: 'F',
           avatarMood: 'neutral',
           ttsLang: "en-GB",
@@ -264,11 +267,22 @@ export default function PracticePage() {
     }
   }, [conversation]);
 
-  if (!agentId) {
+  if (!character) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-purple-600">
         <div className="text-white text-xl">
-          Error: Missing NEXT_PUBLIC_ELEVENLABS_AGENT_ID in environment variables
+          Error: Character not found
+        </div>
+      </div>
+    );
+  }
+
+  if (!agentId) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-purple-600">
+        <div className="text-white text-xl text-center p-8">
+          <p className="mb-4">⚠️ Agent ID not configured for {character.name}</p>
+          <p className="text-sm">Please add the ElevenLabs agent ID in the character configuration</p>
         </div>
       </div>
     );
@@ -279,10 +293,13 @@ export default function PracticePage() {
       <main className="relative w-full max-w-md h-screen flex flex-col">
         {/* Header */}
         <div className="p-6 text-center">
-          <h1 className="text-3xl font-bold text-white">Scenario:</h1>
-          <h2 className="text-3xl font-bold text-white">
-            {scenarioTitles[params.scenario || "sell-pen"] || "Unknown"}
+          <h1 className="text-2xl font-bold text-white">{character.title}</h1>
+          <h2 className="text-lg text-white/90 mt-2">
+            {character.name}
           </h2>
+          <div className="mt-3 px-4 py-2 bg-white/20 rounded-lg text-white text-sm">
+            🎯 Goal: {character.goal}
+          </div>
         </div>
 
         {/* Avatar */}
