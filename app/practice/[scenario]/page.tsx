@@ -399,14 +399,29 @@ export default function PracticePage() {
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--gradient-bg)' }}>
       <main className="relative w-full max-w-md mx-auto h-screen flex flex-col">
-        {/* Back Button - Top */}
-        <div className="p-4 flex items-center">
+        {/* Top Bar with Back Button and Live Status */}
+        <div className="p-4 flex items-center justify-between">
           <Link
             href="/"
             className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-xl hover:bg-white/30 transition-all text-sm font-semibold hover:scale-105"
           >
             ← Back
           </Link>
+
+          {/* Connection Status - Top Right */}
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold backdrop-blur-md border transition-all ${
+            conversation.status === "connected"
+              ? "bg-emerald-500/90 border-emerald-400/50 text-white shadow-lg shadow-emerald-500/20"
+              : "bg-white/10 border-white/20 text-white/80"
+          }`}>
+            <div className={`w-2 h-2 rounded-full ${
+              conversation.status === "connected" ? "bg-white animate-pulse shadow-lg shadow-white/50" : "bg-white/50"
+            }`}></div>
+            <span>
+              {conversation.status === "connected" ? "Live" : "Connecting..."}
+              {conversation.isSpeaking && " • Speaking"}
+            </span>
+          </div>
         </div>
 
         {/* Header with Character Info */}
@@ -458,49 +473,21 @@ export default function PracticePage() {
           </div>
         </div>
 
-        {/* Avatar */}
-        <div className="flex-1 flex items-center justify-center relative min-h-0">
+        {/* Avatar - Takes up all remaining space */}
+        <div className="flex-1 flex items-center justify-center relative">
           <div
             ref={avatarRef}
-            className="w-full h-full"
+            className="w-full h-full absolute inset-0"
             style={{ background: 'transparent' }}
           />
           {loading && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-white text-xl font-semibold">
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <div className="text-white text-xl font-semibold bg-black/20 backdrop-blur-sm px-6 py-3 rounded-2xl">
                 {error ? `Error: ${error}` : `Loading Avatar ${loadingProgress}%`}
               </div>
             </div>
           )}
         </div>
-
-        {/* Connection Status */}
-        <div className="px-6 py-3 text-center">
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold backdrop-blur-md border transition-all ${
-            conversation.status === "connected"
-              ? "bg-emerald-500/90 border-emerald-400/50 text-white shadow-lg shadow-emerald-500/20"
-              : "bg-white/10 border-white/20 text-white/80"
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${
-              conversation.status === "connected" ? "bg-white animate-pulse shadow-lg shadow-white/50" : "bg-white/50"
-            }`}></div>
-            <span>
-              {conversation.status === "connected" ? "Live" : "Connecting..."}
-              {conversation.isSpeaking && " • Speaking"}
-            </span>
-          </div>
-        </div>
-
-        {/* Hidden: Emotion buttons (commented out) */}
-        {/* <div className="px-6 py-2 flex gap-2 justify-center flex-wrap">
-          <button onClick={() => handleEmotionClick("neutral")} className="px-3 py-1 rounded-full text-xs">Neutral</button>
-          <button onClick={() => handleEmotionClick("happy")} className="px-3 py-1 rounded-full text-xs">Happy</button>
-          <button onClick={() => handleEmotionClick("mad")} className="px-3 py-1 rounded-full text-xs">Mad</button>
-          <button onClick={() => handleEmotionClick("sad")} className="px-3 py-1 rounded-full text-xs">Sad</button>
-        </div> */}
-
-        {/* Bottom spacing */}
-        <div className="h-8"></div>
       </main>
     </div>
   );
