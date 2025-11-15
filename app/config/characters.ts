@@ -40,7 +40,7 @@ export const characters: Character[] = [
     agentId: 'agent_0301ka3p51kcevfvty4zjqxz2qz0',
     goal: "Motivate them to contribute to the project",
     objectives: [
-      { id: "encourage", description: "Motivate John to participate", completed: false },
+      { id: "encouragehim", description: "Motivate John to participate", completed: false },
       // { id: "encourage2", description: "Find something that excites Jordan about the project", completed: false }
     ],
     description: "A team member who seems disengaged and needs motivation",
@@ -54,7 +54,7 @@ export const characters: Character[] = [
     agentId: 'agent_1201ka3jnv0mea5bsqkt2gt1j4mz',
     goal: "Present your hackathon project confidently and handle their tough questions",
     objectives: [
-      { id: "pitch", description: "Convince the judge to make your team win", completed: false },
+      { id: "pitch2", description: "Convince the judge to make your team win", completed: false },
       // { id: "handle-criticism", description: "Handle Morgan's tough questions professionally", completed: false },
       // { id: "defend", description: "Defend your project's value proposition", completed: false }
     ],
