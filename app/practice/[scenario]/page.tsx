@@ -57,8 +57,16 @@ export default function PracticePage() {
 
   // Analyze conversation periodically
   const analyzeConversation = useCallback(async () => {
-    if (!character || conversationMessages.length < 2 || isAnalyzing) return;
+    if (!character || conversationMessages.length < 2 || isAnalyzing) {
+      console.log('⏭️ Skipping analysis:', {
+        hasCharacter: !!character,
+        messageCount: conversationMessages.length,
+        isAnalyzing
+      });
+      return;
+    }
 
+    console.log('🔍 Starting analysis...');
     setIsAnalyzing(true);
     try {
       const response = await fetch('/api/analyze-conversation', {
@@ -337,52 +345,64 @@ export default function PracticePage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-purple-600">
+    <div className="flex min-h-screen" style={{ background: 'var(--gradient-bg)' }}>
       <main className="relative w-full max-w-md mx-auto h-screen flex flex-col">
         {/* Back Button - Top */}
         <div className="p-4 flex items-center">
           <Link
             href="/"
-            className="px-4 py-2 bg-white/20 text-white rounded-full hover:bg-white/30 transition-colors text-sm"
+            className="px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-xl hover:bg-white/30 transition-all text-sm font-semibold hover:scale-105"
           >
-            ← Back to Map
+            ← Back
           </Link>
         </div>
 
         {/* Header with Character Info */}
         <div className="px-6 pb-2">
-          <h1 className="text-xl font-bold text-white">{character.name}</h1>
-          <p className="text-sm text-white/80">{character.title}</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{character.name}</h1>
+          <p className="text-sm text-white/90 font-medium">{character.title}</p>
         </div>
 
         {/* Objectives Checklist */}
         <div className="px-6 pb-3">
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
-            <div className="text-white text-xs font-semibold mb-2">OBJECTIVES:</div>
-            <div className="space-y-1">
+          <div className="bg-white/15 backdrop-blur-md rounded-2xl p-4 border border-white/20 shadow-xl">
+            <div className="text-white text-xs font-bold tracking-wider mb-3 flex items-center justify-between">
+              <span>OBJECTIVES</span>
+              {isAnalyzing && (
+                <div className="flex items-center gap-1.5 text-white/80">
+                  <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                  </svg>
+                  <span className="text-xs">Analyzing...</span>
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
               {objectives.map((objective) => (
                 <label
                   key={objective.id}
-                  className="flex items-center gap-2 text-white text-sm cursor-pointer"
+                  className="flex items-start gap-3 text-white text-sm group"
                 >
-                  <input
-                    type="checkbox"
-                    checked={objective.completed}
-                    disabled
-                    className="w-4 h-4 rounded border-white/30 bg-white/20 checked:bg-green-500"
-                  />
-                  <span className={objective.completed ? 'line-through opacity-60' : ''}>
+                  <div className="relative flex-shrink-0 mt-0.5">
+                    <input
+                      type="checkbox"
+                      checked={objective.completed}
+                      disabled
+                      className="w-5 h-5 rounded-md border-2 border-white/40 bg-white/10 checked:bg-gradient-to-br checked:from-green-400 checked:to-emerald-500 checked:border-green-400 appearance-none cursor-default transition-all"
+                    />
+                    {objective.completed && (
+                      <svg className="w-3 h-3 text-white absolute top-1 left-1 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className={`flex-1 leading-snug ${objective.completed ? 'line-through opacity-70' : 'opacity-100'}`}>
                     {objective.description}
                   </span>
                 </label>
               ))}
             </div>
-            {isAnalyzing && (
-              <div className="mt-2 text-xs text-white/60 flex items-center gap-1">
-                <div className="w-3 h-3 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></div>
-                Analyzing conversation...
-              </div>
-            )}
           </div>
         </div>
 
@@ -403,15 +423,19 @@ export default function PracticePage() {
         </div>
 
         {/* Connection Status */}
-        <div className="px-6 py-2 text-center">
-          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs ${
-            conversation.status === "connected" ? "bg-green-500" : "bg-gray-500"
-          } text-white`}>
+        <div className="px-6 py-3 text-center">
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold backdrop-blur-md border transition-all ${
+            conversation.status === "connected"
+              ? "bg-emerald-500/90 border-emerald-400/50 text-white shadow-lg shadow-emerald-500/20"
+              : "bg-white/10 border-white/20 text-white/80"
+          }`}>
             <div className={`w-2 h-2 rounded-full ${
-              conversation.status === "connected" ? "bg-white animate-pulse" : "bg-white/50"
+              conversation.status === "connected" ? "bg-white animate-pulse shadow-lg shadow-white/50" : "bg-white/50"
             }`}></div>
-            {conversation.status === "connected" ? "Connected" : "Connecting..."}
-            {conversation.isSpeaking && " - Speaking"}
+            <span>
+              {conversation.status === "connected" ? "Live" : "Connecting..."}
+              {conversation.isSpeaking && " • Speaking"}
+            </span>
           </div>
         </div>
 
