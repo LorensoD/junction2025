@@ -28,6 +28,8 @@ export default function PracticePage() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioQueueRef = useRef<{ buffer: AudioBuffer; timestamp: number }[]>([]);
   const isPlayingRef = useRef(false);
+    const speakingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isSpeakingRef = useRef(false);
   const params = useParams<{ scenario: string }>();
 
   // Find the character based on the route parameter
@@ -130,6 +132,22 @@ export default function PracticePage() {
         source: message.source,
         message: message.message?.substring(0, 100)
       });
+
+        if(message.source === 'ai' && headRef.current && message.message) {
+            console.log("🗣️ Triggering lip-sync for:", message.message.substring(0, 50));
+            try {
+                // Clear any existing timeout
+                if (speakingTimeoutRef.current) {
+                    clearTimeout(speakingTimeoutRef.current);
+                    speakingTimeoutRef.current = null;
+                }
+
+                isSpeakingRef.current = true;
+                headRef.current.speakText(message.message);
+            } catch (error) {
+                console.error("Failed to trigger lip-sync:", error);
+            }
+        }
 
       // Store message for analysis
       if (message.message) {
@@ -248,11 +266,45 @@ export default function PracticePage() {
       console.log("🗣️ Agent is speaking - avatar should show talking animation");
       setEmotion("talking");
       // TalkingHead will automatically show subtle mouth movements in talking state
-    } else if (!conversation.isSpeaking && headRef.current) {
-      console.log("🤐 Agent stopped speaking");
-      setEmotion("neutral");
+        isSpeakingRef.current = true;
+    } else if (!conversation.isSpeaking && headRef.current && isSpeakingRef.current) {
+        console.log("🤐 Agent stopped speaking - stopping lip animation");
+        setEmotion("neutral");
+
+        // Set a timeout to force stop the lip animation after a short delay
+        // This ensures the audio has actually ended before we stop the lips
+        speakingTimeoutRef.current = setTimeout(() => {
+            if (headRef.current && !conversation.isSpeaking) {
+                console.log("🛑 Hard stop on lip movement - audio ended");
+                try {
+                    // Force stop any ongoing speech animation
+                    headRef.current.stopSpeaking();
+                } catch (error) {
+                    console.error("Error stopping speech animation:", error);
+                }
+                setEmotion("neutral");
+                isSpeakingRef.current = false;
+            }
+        }, 100); // Small delay to account for any audio buffering
+
     }
+
+      return () => {
+          if (speakingTimeoutRef.current) {
+              clearTimeout(speakingTimeoutRef.current);
+          }
+      };
   }, [conversation.isSpeaking]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (speakingTimeoutRef.current) {
+                clearTimeout(speakingTimeoutRef.current);
+                speakingTimeoutRef.current = null;
+            }
+        };
+    }, []);
 
   // Clean up streaming when conversation ends
   useEffect(() => {
