@@ -18,9 +18,9 @@ export interface Character {
 
 export const characters: Character[] = [
   {
-    id: "annoying-teammate",
-    name: "Alex",
-    title: "Annoying Teammate with Good Idea",
+    id: "opposing-teammate",
+    name: "Michael",
+    title: "Opposing teammate",
     modelUrl: "https://models.readyplayer.me/6918415bfb99478e41ab217d.glb",
     agentId: 'agent_6701ka3p5g34evav5h5yn3a1r98q',
     goal: "Listen to their idea and provide constructive feedback without dismissing them",
@@ -34,7 +34,7 @@ export const characters: Character[] = [
   },
   {
     id: "unmotivated-teammate",
-    name: "Jordan",
+    name: "John",
     title: "Unmotivated Teammate",
     modelUrl: "https://models.readyplayer.me/691864cc672cca15c2fe3f3a.glb",
     agentId: 'agent_0301ka3p51kcevfvty4zjqxz2qz0',
@@ -47,9 +47,9 @@ export const characters: Character[] = [
     position: { x: 75, y: 60 }
   },
   {
-    id: "sassy-judge",
-    name: "Morgan",
-    title: "Sassy Judge",
+    id: "judge",
+    name: "Nadia",
+    title: "Judge",
     modelUrl: "https://models.readyplayer.me/6918653b8e7eb1274343a95d.glb",
     agentId: 'agent_1201ka3jnv0mea5bsqkt2gt1j4mz',
     goal: "Present your hackathon project confidently and handle their tough questions",
